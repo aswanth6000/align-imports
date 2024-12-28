@@ -1,4 +1,5 @@
 {
+  "publisher": "aswanth6000",
   "name": "align-imports",
   "displayName": "Align Imports",
   "description": "VS Code extension that aligns imports in JavaScript, TypeScript, JSX, and TSX files according to your specified format (sorting imports from packages first, @ paths second, and relative paths last).",
