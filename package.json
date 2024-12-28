@@ -1,7 +1,7 @@
 {
   "name": "align-imports",
   "displayName": "Align Imports",
-  "description": "S Code extension that aligns imports in JavaScript, TypeScript, JSX, and TSX files according to your specified format (sorting imports from packages first, @ paths second, and relative paths last).",
+  "description": "VS Code extension that aligns imports in JavaScript, TypeScript, JSX, and TSX files according to your specified format (sorting imports from packages first, @ paths second, and relative paths last).",
   "version": "0.0.1",
   "engines": {
     "vscode": "^1.96.0"
