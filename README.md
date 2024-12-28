@@ -1,4 +1,4 @@
-# Align Imports Extension for VS Code
+# Align Imports Plus Extension for VS Code
 
 A Visual Studio Code extension that automatically formats and organizes JavaScript/TypeScript import statements. It groups imports into three categories (package, @-prefixed, and relative imports) and maintains proper spacing between groups.
 
