@@ -17,31 +17,49 @@ export function activate(context: vscode.ExtensionContext) {
     }
   );
 
+  // Track if the save was triggered by our formatter
+  let isInternalSave = false;
+  
   // Save handler
-  let isFormatting = false;
-  const saveDisposable = vscode.workspace.onDidSaveTextDocument((document: vscode.TextDocument) => {
-    // Skip if already formatting
-    if (isFormatting) {
-      return;
-    }
-
+  const saveDisposable = vscode.workspace.onWillSaveTextDocument((event: vscode.TextDocumentWillSaveEvent) => {
+    // Only process if it's not our own save and it's a manual save
     if (
+      !isInternalSave && 
+      event.reason === vscode.TextDocumentSaveReason.Manual &&
       ["javascript", "typescript", "javascriptreact", "typescriptreact"].includes(
-        document.languageId
+        event.document.languageId
       )
     ) {
       const editor = vscode.window.activeTextEditor;
-      if (editor && editor.document === document) {
-        isFormatting = true;
-        void formatImports().finally(() => {
-          isFormatting = false;
-        });
+      if (editor && editor.document === event.document) {
+        // Add our formatting as a save participant
+        event.waitUntil(
+          (async () => {
+            isInternalSave = true;
+            try {
+              const text = event.document.getText();
+              const sortedText = sortAndFormatImports(text);
+              
+              if (sortedText !== text) {
+                const fullRange = new vscode.Range(
+                  event.document.positionAt(0),
+                  event.document.positionAt(text.length)
+                );
+                return [new vscode.TextEdit(fullRange, sortedText)];
+              }
+            } finally {
+              isInternalSave = false;
+            }
+            return [];
+          })()
+        );
       }
     }
   });
 
   context.subscriptions.push(disposable, saveDisposable);
 }
+
 
 async function formatImports(): Promise<void> {
   const editor = vscode.window.activeTextEditor;

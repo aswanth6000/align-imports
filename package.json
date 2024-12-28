@@ -3,7 +3,7 @@
   "name": "align-imports-plus",
   "displayName": "Align Imports Plus",
   "description": "VS Code extension that aligns imports in JavaScript, TypeScript, JSX, and TSX files according to your specified format (sorting imports from packages first, @ paths second, and relative paths last).",
-  "version": "0.0.1",
+  "version": "0.0.3",
   "engines": {
     "vscode": "^1.96.0"
   },
@@ -50,5 +50,6 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/aswanth6000/align-imports"
-  }
+  },
+  "icon": "icon.png"
 }
