@@ -1,71 +1,82 @@
-# align-imports README
+# Align Imports Extension for VS Code
 
-This is the README for your extension "align-imports". After writing up a brief description, we recommend including the following sections.
+A Visual Studio Code extension that automatically formats and organizes JavaScript/TypeScript import statements. It groups imports into three categories (package, @-prefixed, and relative imports) and maintains proper spacing between groups.
 
 ## Features
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
+- Automatically formats imports on file save
+- Groups imports into three categories:
+  1. Package imports (e.g., `import React from 'react'`)
+  2. @-prefixed imports (e.g., `import { Button } from '@/components/ui/button'`)
+  3. Relative imports (e.g., `import { utils } from './utils'`)
+- Maintains proper spacing between import groups
+- Preserves multi-line import formatting
+- Removes duplicate imports
+- Works with JavaScript, TypeScript, and React files
+- Supports both manual triggering and automatic formatting on save
 
-For example if there is an image subfolder under your extension project workspace:
+## Installation
 
-\!\[feature X\]\(images/feature-x.png\)
+1. Open VS Code
+2. Press `Ctrl+P` (`Cmd+P` on macOS) to open the Quick Open dialog
+3. Type `ext install import-formatter` and press Enter
+4. Restart VS Code
 
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+## Usage
 
-## Requirements
+The extension works in two ways:
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+1. **Automatic Formatting**: Your imports will be automatically formatted whenever you save a JavaScript or TypeScript file.
 
-## Extension Settings
+2. **Manual Formatting**: You can manually format imports using:
+   - Command Palette (`Ctrl+Shift+P` or `Cmd+Shift+P`): Type "Format Imports"
+   - Or assign a custom keyboard shortcut
 
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
+## Example
 
-For example:
+Before:
+```typescript
+import { Button } from './components/Button';
+import React from 'react';
+import { Something } from '@/components/Something';
+import { useState } from 'react';
+import { Utils } from '../utils';
+```
 
-This extension contributes the following settings:
+After:
+```typescript
+import React from 'react';
+import { useState } from 'react';
 
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
+import { Something } from '@/components/Something';
 
-## Known Issues
+import { Button } from './components/Button';
+import { Utils } from '../utils';
+```
 
-Calling out known issues can help limit users opening duplicate issues against your extension.
+## Supported File Types
 
-## Release Notes
+- JavaScript (.js)
+- TypeScript (.ts)
+- React JavaScript (.jsx)
+- React TypeScript (.tsx)
 
-Users appreciate release notes as you update your extension.
+## Configuration
 
-### 1.0.0
+The extension works out of the box with no configuration needed.
 
-Initial release of ...
+## Contributing
 
-### 1.0.1
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
-Fixed issue #.
+## License
 
-### 1.1.0
+This project is licensed under the MIT License - see the LICENSE file for details.
 
-Added features X, Y, and Z.
+## Issues and Feedback
 
----
-
-## Following extension guidelines
-
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
-
-* [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
-
-## Working with Markdown
-
-You can author your README using Visual Studio Code. Here are some useful editor keyboard shortcuts:
-
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
-
-## For more information
-
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
-
-**Enjoy!**
+If you find any bugs or have suggestions for improvements, please file an issue on the GitHub repository.
