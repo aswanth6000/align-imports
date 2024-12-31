@@ -3,10 +3,18 @@ import * as vscode from "vscode";
 interface ImportItem {
   original: string;
   normalized: string;
+  startLine: number;
+  endLine: number;
+  comments: string[];
+}
+
+interface ImportBlock {
+  imports: ImportItem[];
+  precedingComments: string[];
+  blankLinesBefore: number;
 }
 
 export function activate(context: vscode.ExtensionContext) {
-  // Command to align imports manually
   const disposable = vscode.commands.registerCommand(
     "extension.alignImports",
     () => {
@@ -17,12 +25,9 @@ export function activate(context: vscode.ExtensionContext) {
     }
   );
 
-  // Track if the save was triggered by our formatter
   let isInternalSave = false;
   
-  // Save handler
   const saveDisposable = vscode.workspace.onWillSaveTextDocument((event: vscode.TextDocumentWillSaveEvent) => {
-    // Only process if it's not our own save and it's a manual save
     if (
       !isInternalSave && 
       event.reason === vscode.TextDocumentSaveReason.Manual &&
@@ -32,20 +37,23 @@ export function activate(context: vscode.ExtensionContext) {
     ) {
       const editor = vscode.window.activeTextEditor;
       if (editor && editor.document === event.document) {
-        // Add our formatting as a save participant
         event.waitUntil(
           (async () => {
             isInternalSave = true;
             try {
-              const text = event.document.getText();
-              const sortedText = sortAndFormatImports(text);
-              
-              if (sortedText !== text) {
-                const fullRange = new vscode.Range(
-                  event.document.positionAt(0),
-                  event.document.positionAt(text.length)
-                );
-                return [new vscode.TextEdit(fullRange, sortedText)];
+              // Only process the import section
+              const importSection = findImportSection(event.document);
+              if (importSection) {
+                const { start, end, text } = importSection;
+                const sortedText = sortAndFormatImports(text);
+                
+                if (sortedText !== text) {
+                  const range = new vscode.Range(
+                    event.document.positionAt(start),
+                    event.document.positionAt(end)
+                  );
+                  return [new vscode.TextEdit(range, sortedText)];
+                }
               }
             } finally {
               isInternalSave = false;
@@ -60,6 +68,83 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(disposable, saveDisposable);
 }
 
+interface ImportSection {
+  start: number;
+  end: number;
+  text: string;
+}
+
+function findImportSection(document: vscode.TextDocument): ImportSection | null {
+  const text = document.getText();
+  const lines = text.split("\n");
+  
+  let importStart: number | null = null;
+  let importEnd: number | null = null;
+  let currentPos = 0;
+  let inComment = false;
+  let inMultilineImport = false;
+  let braceCount = 0;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const trimmedLine = line.trim();
+    
+    // Handle multi-line comments
+    if (trimmedLine.startsWith("/*")) {
+      inComment = true;
+    }
+    if (trimmedLine.endsWith("*/")) {
+      inComment = false;
+      currentPos += line.length + 1;
+      continue;
+    }
+    if (inComment) {
+      currentPos += line.length + 1;
+      continue;
+    }
+
+    // Skip single-line comments
+    if (trimmedLine.startsWith("//")) {
+      currentPos += line.length + 1;
+      continue;
+    }
+
+    // Track import statements
+    if (trimmedLine.startsWith("import")) {
+      if (importStart === null) {
+        importStart = currentPos;
+      }
+      inMultilineImport = true;
+      braceCount += (line.match(/{/g) || []).length - (line.match(/}/g) || []).length;
+    } else if (inMultilineImport) {
+      braceCount += (line.match(/{/g) || []).length - (line.match(/}/g) || []).length;
+    }
+
+    if (inMultilineImport && (braceCount === 0 || trimmedLine.endsWith(";"))) {
+      inMultilineImport = false;
+      importEnd = currentPos + line.length;
+    }
+
+    // If we find non-import code after imports, stop
+    if (!inMultilineImport && !trimmedLine.startsWith("import") && trimmedLine !== "") {
+      if (importStart !== null) {
+        break;
+      }
+    }
+
+    currentPos += line.length + 1;
+  }
+
+  if (importStart !== null && importEnd !== null) {
+    return {
+      start: importStart,
+      end: importEnd,
+      text: text.substring(importStart, importEnd)
+    };
+  }
+
+  return null;
+}
 
 async function formatImports(): Promise<void> {
   const editor = vscode.window.activeTextEditor;
@@ -68,124 +153,146 @@ async function formatImports(): Promise<void> {
   }
 
   const document = editor.document;
-  const text = document.getText();
-  const sortedText = sortAndFormatImports(text);
-
-  // Only make changes if the text actually changed
-  if (sortedText !== text) {
-    await editor.edit((editBuilder: vscode.TextEditorEdit) => {
-      const fullRange = new vscode.Range(
-        document.positionAt(0),
-        document.positionAt(text.length)
-      );
-      editBuilder.replace(fullRange, sortedText);
-    });
+  const importSection = findImportSection(document);
+  
+  if (importSection) {
+    const sortedText = sortAndFormatImports(importSection.text);
+    
+    if (sortedText !== importSection.text) {
+      await editor.edit((editBuilder: vscode.TextEditorEdit) => {
+        const range = new vscode.Range(
+          document.positionAt(importSection.start),
+          document.positionAt(importSection.end)
+        );
+        editBuilder.replace(range, sortedText);
+      });
+    }
   }
 }
 
 function sortAndFormatImports(text: string): string {
-  const lines: string[] = text.split("\n");
-  const importStatements: string[] = [];
-  const otherLines: string[] = [];
-  const seenImports = new Set<string>();
-
-  let currentImport = "";
+  const lines = text.split("\n");
+  const importBlocks: ImportBlock[] = [];
+  let currentBlock: ImportBlock = {
+    imports: [],
+    precedingComments: [],
+    blankLinesBefore: 0
+  };
+  
+  let currentImport: ImportItem | null = null;
   let isInImport = false;
   let braceCount = 0;
-
+  
   for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    const trimmedLine = line.trim();
-
-    if (trimmedLine.startsWith("import")) {
+    const line = lines[i].trim();
+    
+    if (line === "") {
+      if (currentImport === null) {
+        currentBlock.blankLinesBefore++;
+      }
+      continue;
+    }
+    
+    // Handle comments
+    if (line.startsWith("//") || line.startsWith("/*")) {
+      if (currentImport) {
+        currentImport.comments.push(line);
+      } else {
+        currentBlock.precedingComments.push(line);
+      }
+      continue;
+    }
+    
+    if (line.startsWith("import")) {
+      if (currentImport) {
+        currentBlock.imports.push(currentImport);
+      }
+      
       isInImport = true;
-      currentImport = line;
-      braceCount = (trimmedLine.match(/{/g) || []).length - (trimmedLine.match(/}/g) || []).length;
+      currentImport = {
+        original: line,
+        normalized: line.replace(/\s+/g, " "),
+        startLine: i,
+        endLine: i,
+        comments: []
+      };
       
-      if (braceCount === 0 && trimmedLine.endsWith(";")) {
-        if (!seenImports.has(currentImport)) {
-          seenImports.add(currentImport);
-          importStatements.push(currentImport);
-        }
-        isInImport = false;
-        currentImport = "";
-      }
-    } else if (isInImport) {
-      currentImport += "\n" + line;
-      braceCount += (trimmedLine.match(/{/g) || []).length - (trimmedLine.match(/}/g) || []).length;
+      braceCount = (line.match(/{/g) || []).length - (line.match(/}/g) || []).length;
       
-      if (braceCount === 0 && trimmedLine.includes(";")) {
-        if (!seenImports.has(currentImport)) {
-          seenImports.add(currentImport);
-          importStatements.push(currentImport);
-        }
+      if (braceCount === 0 && line.endsWith(";")) {
+        currentBlock.imports.push(currentImport);
+        currentImport = null;
         isInImport = false;
-        currentImport = "";
       }
-    } else if (trimmedLine !== "") {
-      otherLines.push(...lines.slice(i));
-      break;
+    } else if (isInImport && currentImport) {
+      currentImport.original += "\n" + line;
+      currentImport.normalized += " " + line.replace(/\s+/g, " ");
+      currentImport.endLine = i;
+      
+      braceCount += (line.match(/{/g) || []).length - (line.match(/}/g) || []).length;
+      
+      if (braceCount === 0 && line.includes(";")) {
+        currentBlock.imports.push(currentImport);
+        currentImport = null;
+        isInImport = false;
+      }
     }
   }
-
+  
+  if (currentImport) {
+    currentBlock.imports.push(currentImport);
+  }
+  
   // Group imports
   const packageImports: ImportItem[] = [];
   const atImports: ImportItem[] = [];
   const relativeImports: ImportItem[] = [];
-
-  importStatements.forEach((statement: string) => {
-    // Normalize multi-line imports to single line for sorting
-    const normalizedStatement = statement
-      .replace(/\s+/g, " ")
-      .replace(/{\s+/g, "{ ")
-      .replace(/\s+}/g, " }")
-      .replace(/,\s+/g, ", ");
-
-    if (statement.includes("@")) {
-      atImports.push({ original: statement, normalized: normalizedStatement });
-    } else if (statement.includes("./") || statement.includes("../")) {
-      relativeImports.push({ original: statement, normalized: normalizedStatement });
+  
+  currentBlock.imports.forEach((item) => {
+    if (item.normalized.includes("'@") || item.normalized.includes('"@')) {
+      atImports.push(item);
+    } else if (item.normalized.includes("./") || item.normalized.includes("../")) {
+      relativeImports.push(item);
     } else {
-      packageImports.push({ original: statement, normalized: normalizedStatement });
+      packageImports.push(item);
     }
   });
-
+  
   // Sort imports within their groups
   const sortImports = (imports: ImportItem[]): string[] => {
     return imports
       .sort((a, b) => a.normalized.localeCompare(b.normalized))
-      .map(item => item.original);
+      .map(item => {
+        const comments = item.comments.length > 0 
+          ? item.comments.join("\n") + "\n"
+          : "";
+        return comments + item.original;
+      });
   };
-
-  // Build the final text with proper spacing
+  
+  // Build the final text
   const importGroups: string[] = [];
   
+  if (currentBlock.precedingComments.length > 0) {
+    importGroups.push(...currentBlock.precedingComments);
+  }
+  
   if (packageImports.length) {
+    if (importGroups.length > 0) {importGroups.push("");}
     importGroups.push(...sortImports(packageImports));
   }
   
   if (atImports.length) {
-    if (importGroups.length) {importGroups.push("");}
+    if (importGroups.length > 0) {importGroups.push("");}
     importGroups.push(...sortImports(atImports));
   }
   
   if (relativeImports.length) {
-    if (importGroups.length) {importGroups.push("");}
+    if (importGroups.length > 0) {importGroups.push("");}
     importGroups.push(...sortImports(relativeImports));
   }
-
-  // Combine everything
-  const finalLines = importGroups.length > 0 
-    ? [...importGroups, "", ...otherLines]
-    : otherLines;
-
-  // Remove any trailing empty lines at the end of the file
-  while (finalLines.length > 0 && finalLines[finalLines.length - 1].trim() === "") {
-    finalLines.pop();
-  }
-
-  // Ensure file ends with exactly one newline
-  return finalLines.join("\n") + "\n";
+  
+  return importGroups.join("\n");
 }
 
 export function deactivate(): void {}
