@@ -20,7 +20,57 @@
         "command": "extension.alignImports",
         "title": "Align Imports"
       }
-    ]
+    ],
+    "configuration": {
+      "title": "Align Imports Plus",
+      "properties": {
+        "importSorter.importOrder": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["package", "scoped", "relative"]
+          },
+          "default": ["package", "scoped", "relative"],
+          "description": "Order of import groups"
+        },
+        "importSorter.sortBy": {
+          "type": "string",
+          "enum": ["alphabetical", "length-asc", "length-desc"],
+          "default": "alphabetical",
+          "description": "How to sort imports within groups"
+        },
+        "importSorter.removeUnused": {
+          "type": "boolean",
+          "default": false,
+          "description": "Remove unused imports during sorting"
+        },
+        "importSorter.emptyLineBetweenGroups": {
+          "type": "boolean",
+          "default": true,
+          "description": "Add empty line between import groups"
+        },
+        "importSorter.maxLineLength": {
+          "type": "number",
+          "default": 80,
+          "description": "Maximum length of import lines before wrapping"
+        },
+        "importSorter.groupByScope": {
+          "type": "boolean",
+          "default": true,
+          "description": "Group imports by their scope (package, scoped, relative)"
+        },
+        "importSorter.preserveLeadingComments": {
+          "type": "boolean",
+          "default": true,
+          "description": "Preserve comments before imports"
+        },
+        "importSorter.wrapMultilineImports": {
+          "type": "boolean",
+          "default": true,
+          "description": "Wrap long import statements onto multiple lines"
+        }
+      }
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run package",
