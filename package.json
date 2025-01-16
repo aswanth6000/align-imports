@@ -28,14 +28,26 @@
           "type": "array",
           "items": {
             "type": "string",
-            "enum": ["package", "scoped", "relative"]
+            "enum": [
+              "package",
+              "scoped",
+              "relative"
+            ]
           },
-          "default": ["package", "scoped", "relative"],
+          "default": [
+            "package",
+            "scoped",
+            "relative"
+          ],
           "description": "Order of import groups"
         },
         "importSorter.sortBy": {
           "type": "string",
-          "enum": ["alphabetical", "length-asc", "length-desc"],
+          "enum": [
+            "alphabetical",
+            "length-asc",
+            "length-desc"
+          ],
           "default": "alphabetical",
           "description": "How to sort imports within groups"
         },
@@ -84,18 +96,18 @@
     "test": "vscode-test"
   },
   "devDependencies": {
-    "@types/vscode": "^1.96.0",
-    "@types/mocha": "^10.0.10",
-    "@types/node": "20.x",
-    "@typescript-eslint/eslint-plugin": "^8.17.0",
-    "@typescript-eslint/parser": "^8.17.0",
-    "eslint": "^9.16.0",
-    "typescript": "^5.7.2",
-    "ts-loader": "^9.5.1",
-    "webpack": "^5.95.0",
+    "@types/vscode": "^1.91.0",
+    "@types/mocha": "^8.2.3",
+    "@types/node": "16.x",
+    "@typescript-eslint/eslint-plugin": "^5.62.0",
+    "@typescript-eslint/parser": "^5.62.0",
+    "eslint": "^8.45.0",
+    "typescript": "^4.9.5",
+    "ts-loader": "^9.4.4",
+    "webpack": "^5.88.2",
     "webpack-cli": "^5.1.4",
-    "@vscode/test-cli": "^0.0.10",
-    "@vscode/test-electron": "^2.4.1"
+    "@vscode/test-cli": "^0.0.4",
+    "@vscode/test-electron": "^2.3.8"
   },
   "repository": {
     "type": "git",
